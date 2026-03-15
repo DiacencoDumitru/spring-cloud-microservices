@@ -1,6 +1,5 @@
 package course.psvmchannel.order;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cloud.openfeign.EnableFeignClients;
@@ -13,24 +12,19 @@ import org.springframework.web.bind.annotation.RestController;
 @EnableFeignClients
 public class OrderApplication {
 
-    @Autowired
-    private NotificationServiceFeignClient feignClient;
+    private final OrderService orderService;
+
+    public OrderApplication(OrderService orderService) {
+        this.orderService = orderService;
+    }
 
     public static void main(String[] args) {
         SpringApplication.run(OrderApplication.class, args);
     }
 
-
-    // сделать заказ (передаём поле orderName)
     @GetMapping("/doOrder")
     public String doOrder(@RequestParam String orderName) {
-
-        // в случае если возникнет исключение отправим сообщение
-        try {
-            feignClient.sendNotification("Вы сделали заказ " + orderName);
-            return "Был сделан заказ " + orderName;
-        } catch (Exception e) {
-            return "Исключение. Оповещение не было отправлено";
-        }
+        return orderService.placeOrder(orderName);
     }
 }
+
