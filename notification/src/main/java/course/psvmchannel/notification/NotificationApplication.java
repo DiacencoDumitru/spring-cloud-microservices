@@ -14,9 +14,9 @@ public class NotificationApplication {
         SpringApplication.run(NotificationApplication.class, args);
     }
 
-    // принимает тело запроса @RequestBody notification
     @PostMapping("/sendNotification")
     public void sendNotification(@RequestBody String notification) {
-        System.out.println("Отправляем оповещение: " + notification);
+        System.out.println("Sending notification: " + notification);
     }
 }
+
