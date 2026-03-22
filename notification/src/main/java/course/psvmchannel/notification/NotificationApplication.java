@@ -18,5 +18,10 @@ public class NotificationApplication {
     public void sendNotification(@RequestBody String notification) {
         System.out.println("Sending notification: " + notification);
     }
+
+    @PostMapping("/compensateNotification")
+    public void compensateNotification(@RequestBody String reason) {
+        System.out.println("Saga compensation (notification): " + reason);
+    }
 }
 
