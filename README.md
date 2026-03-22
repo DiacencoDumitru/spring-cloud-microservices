@@ -4,9 +4,10 @@ This repository contains a small **Spring Boot** / **Spring Cloud** microservice
 
 Services:
 - `gateway` – API gateway based on Spring Cloud Netflix Zuul.
-- `order` – order service that calls the notification service using OpenFeign.
-- `notification` – notification service.
-- `users` – users service.
+- `order` – order service; runs an **orchestrated Saga** (inventory reserve → notify → complete).
+- `inventory` – stock reservations (`POST/DELETE /reservations`) for the Saga demo.
+- `notification` – notifications and **compensation** callback for Saga rollback.
+- `users` – users API.
 
 ---
 
@@ -20,112 +21,126 @@ Client (Postman / browser)
         /       \
        v         v
 [ order ]     [ users ]
-   |
+   |   \
+   |    v
+   |  [ inventory ]
    v
 [ notification ]
 ```
 
 - `gateway` (port `8000`)
-  - Routes `/api/order/**` → `order` (port `8001`)
-  - Routes `/api/users/**` → `users` (port `8003`)
+  - `/api/order/**` → `order` (`8001`)
+  - `/api/users/**` → `users` (`8003`)
+  - `/api/inventory/**` → `inventory` (`8004`) — optional direct calls for learning
 
-- `order` (port `8001`)
-  - Endpoint `GET /doOrder?orderName=...`
-  - Uses `NotificationServiceFeignClient` to call `notification`
-  - Call is wrapped with Resilience4j Circuit Breaker
+- `order` (`8001`)
+  - `GET /doOrder?orderName=...` — runs **OrderPlacementSaga** (see below)
 
-- `notification` (port `8002`)
-  - Endpoint `POST /sendNotification`
-  - Logs notification text to the console
+- `inventory` (`8004`)
+  - `POST /reservations` body `{"sku":"iphone"}` → `{"reservationId":"..."}` or `409` if out of stock
+  - `DELETE /reservations/{reservationId}` — release (compensation)
 
-- `users` (port `8003`)
-  - In‑memory list of users
-  - `GET /users` and `GET /users/{id}`
+- `notification` (`8002`)
+  - `POST /sendNotification`
+  - `POST /compensateNotification` — invoked when the Saga must undo the notify step
+
+- `users` (`8003`)
+  - `GET /users`, `GET /users/{id}`
+
+---
+
+### Saga pattern (orchestration)
+
+This project uses **orchestration**: the `order` service coordinates steps and compensations.
+
+**Forward steps** (happy path):
+1. Create local order state (`InMemoryOrderStore`).
+2. **Reserve** stock in `inventory` (Feign).
+3. **Notify** the customer via `notification` (Feign).
+4. Mark order **completed** locally.
+
+**Compensations** (rollback), in reverse order when needed:
+- If notify fails after a reservation exists → `DELETE` reservation (release stock), cancel local order.
+- If local “complete” fails after notify (rare in this demo) → `compensateNotification`, release reservation, cancel order.
+- If reserve returns **409** (no stock) → cancel local order only.
+
+**Not in this repo**: *choreography* (events only, no central coordinator) and durable Saga logs / outbox — you would add those for production.
 
 ---
 
 ### Spring Cloud usage
 
-- **Zuul Gateway**
-  - Single entry point to the system
-  - Route configuration in `gateway/application.yml` (paths mapped to services)
-
-- **OpenFeign**
-  - Interface `NotificationServiceFeignClient` describes HTTP API of `notification`
-  - `order` calls Java methods instead of building HTTP requests manually
-
-- **Circuit Breaker (Resilience4j)**
-  - `OrderService.placeOrder` is annotated with `@CircuitBreaker`
-  - Fallback returns a clear message when `notification` is down
-
-- **Sleuth (distributed tracing)**
-  - Adds trace/span ids to logs in all services
-  - Helps follow a request across `gateway → order → notification` or `gateway → users`
+- **Zuul** – single entry; routes in `gateway/application.yml`.
+- **OpenFeign** – `InventoryFeignClient`, `NotificationServiceFeignClient` for remote steps.
+- **Resilience4j** – `@CircuitBreaker` on `OrderService.placeOrder` (whole Saga call; fallback when the guarded path fails too often).
+- **Sleuth** – trace ids across services in logs.
 
 ---
 
 ### Tech stack
 
-- Java 11
-- Spring Boot 2.7.1
-- Spring Cloud 2021.0.3 (Zuul, OpenFeign, Circuit Breaker, Sleuth)
-- Maven (separate `pom.xml` per service)
+- Java 11, Spring Boot 2.7.1, Spring Cloud 2021.0.3, Maven (one `pom.xml` per service).
 
 ---
 
 ### How to run
 
-**Prerequisites**
-- JDK 11+
-- Maven 3.8+
+**Prerequisites:** JDK 11+, Maven 3.8+
 
-**Build** (from project root):
+**Build** (from repo root — there is a root `pom.xml` that aggregates all modules):
+
+```bash
+mvn clean install
+```
+
+Or build a single service:
 
 ```bash
 cd gateway && mvn clean package
-cd ../order && mvn clean package
-cd ../notification && mvn clean package
-cd ../users && mvn clean package
 ```
 
-**Run** each service in its own terminal:
+**Run** (five terminals):
 
 ```bash
 # gateway (8000)
-cd gateway
-mvn spring-boot:run
+cd gateway && mvn spring-boot:run
+```
 
-# order (8001)
-cd ../order
-mvn spring-boot:run
+```bash
+cd order && mvn spring-boot:run
+```
 
-# notification (8002)
-cd ../notification
-mvn spring-boot:run
+```bash
+cd inventory && mvn spring-boot:run
+```
 
-# users (8003)
-cd ../users
-mvn spring-boot:run
+```bash
+cd notification && mvn spring-boot:run
+```
+
+```bash
+cd users && mvn spring-boot:run
 ```
 
 ---
 
 ### Example calls (via gateway)
 
-Create order (triggers `order` + `notification`):
+Place order (Saga: inventory → notification → local complete):
 
 ```bash
 curl "http://localhost:8000/api/order/doOrder?orderName=iphone"
 ```
 
-Get users list:
+Reserve stock via gateway (optional):
+
+```bash
+curl -X POST "http://localhost:8000/api/inventory/reservations" -H "Content-Type: application/json" -d "{\"sku\":\"iphone\"}"
+```
+
+Users:
 
 ```bash
 curl "http://localhost:8000/api/users/users"
-```
-
-Get user by id:
-
-```bash
 curl "http://localhost:8000/api/users/users/1"
 ```
