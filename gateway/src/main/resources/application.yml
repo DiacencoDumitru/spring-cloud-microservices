@@ -9,3 +9,6 @@ zuul:
     users:
       path: /api/users/**
       url: http://localhost:8003/
+    inventory:
+      path: /api/inventory/**
+      url: http://localhost:8004/
