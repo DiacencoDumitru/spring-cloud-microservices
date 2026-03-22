@@ -1,26 +1,25 @@
 package course.psvmchannel.order;
 
-import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 import org.springframework.stereotype.Service;
+
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
 
 @Service
 public class OrderService {
 
-    private final NotificationServiceFeignClient feignClient;
+    private final OrderPlacementSaga orderPlacementSaga;
 
-    public OrderService(NotificationServiceFeignClient feignClient) {
-        this.feignClient = feignClient;
+    public OrderService(OrderPlacementSaga orderPlacementSaga) {
+        this.orderPlacementSaga = orderPlacementSaga;
     }
 
-    @CircuitBreaker(name = "notificationService", fallbackMethod = "notifyFallback")
+    @CircuitBreaker(name = "notificationService", fallbackMethod = "placeOrderFallback")
     public String placeOrder(String orderName) {
-        feignClient.sendNotification("You created order: " + orderName);
-        return "Order was created: " + orderName;
+        return orderPlacementSaga.placeOrder(orderName);
     }
 
     @SuppressWarnings("unused")
-    private String notifyFallback(String orderName, Throwable ex) {
-        return "Notification service is unavailable. Order " + orderName + " was created without notification";
+    private String placeOrderFallback(String orderName, Throwable ex) {
+        return "Temporary failure: notification path not available. Try again. (" + orderName + ")";
     }
 }
-
