@@ -8,4 +8,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 public interface NotificationServiceFeignClient {
     @PostMapping("/sendNotification")
     void sendNotification(@RequestBody String notification);
+
+    @PostMapping("/compensateNotification")
+    void compensateNotification(@RequestBody String reason);
 }
