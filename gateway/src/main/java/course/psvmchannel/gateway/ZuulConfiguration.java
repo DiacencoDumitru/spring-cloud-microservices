@@ -19,27 +19,12 @@ import org.springframework.cloud.netflix.zuul.web.ZuulHandlerMapping;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-/**
- * Fix for Zuul configuration with Spring Boot 2.5.x + Zuul - "NoSuchMethodError: ErrorController.getErrorPath()":
- */
 @Configuration
 public class ZuulConfiguration {
 
-    /**
-     * The path returned by ErrorController.getErrorPath() with Spring Boot < 2.5
-     * (and no longer available on Spring Boot >= 2.5).
-     */
     private static final String ERROR_PATH = "/error";
     private static final String METHOD = "lookupHandler";
 
-    /**
-     * Constructs a new bean post-processor for Zuul.
-     *
-     * @param routeLocator    the route locator.
-     * @param zuulController  the Zuul controller.
-     * @param errorController the error controller.
-     * @return the new bean post-processor.
-     */
     @Bean
     public ZuulPostProcessor zuulPostProcessor(@Autowired RouteLocator routeLocator,
                                                @Autowired ZuulController zuulController,
@@ -65,8 +50,6 @@ public class ZuulConfiguration {
         @Override
         public Object intercept(Object target, Method method, Object[] args, MethodProxy methodProxy) throws Throwable {
             if (ERROR_PATH.equals(args[0])) {
-                // by entering this branch we avoid the ZuulHandlerMapping.lookupHandler method to trigger the
-                // NoSuchMethodError
                 return null;
             }
             return methodProxy.invokeSuper(target, args);
@@ -90,7 +73,7 @@ public class ZuulConfiguration {
             if (hasErrorController && (bean instanceof ZuulHandlerMapping)) {
                 Enhancer enhancer = new Enhancer();
                 enhancer.setSuperclass(ZuulHandlerMapping.class);
-                enhancer.setCallbackFilter(LookupHandlerCallbackFilter.INSTANCE); // only for lookupHandler
+                enhancer.setCallbackFilter(LookupHandlerCallbackFilter.INSTANCE);
                 enhancer.setCallbacks(new Callback[]{LookupHandlerMethodInterceptor.INSTANCE, NoOp.INSTANCE});
                 Constructor<?> ctor = ZuulHandlerMapping.class.getConstructors()[0];
                 return enhancer.create(ctor.getParameterTypes(), new Object[]{routeLocator, zuulController});

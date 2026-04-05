@@ -144,3 +144,11 @@ Users:
 curl "http://localhost:8000/api/users/users"
 curl "http://localhost:8000/api/users/users/1"
 ```
+
+---
+
+### Developer Hub and OpenAPI
+
+- **http://localhost:8000/** — static hub with links to common gateway routes and Swagger UI on each documented service.
+- **SpringDoc** on **users**, **order**, and **notification**: `/swagger-ui/index.html` and `/v3/api-docs`.
+- Ports: gateway `8000`, order `8001`, notification `8002`, users `8003`, inventory `8004`.

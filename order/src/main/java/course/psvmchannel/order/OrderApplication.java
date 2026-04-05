@@ -27,4 +27,3 @@ public class OrderApplication {
         return orderService.placeOrder(orderName);
     }
 }
-
