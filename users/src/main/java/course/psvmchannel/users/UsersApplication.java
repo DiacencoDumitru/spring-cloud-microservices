@@ -12,7 +12,7 @@ import java.util.List;
 @RestController
 public class UsersApplication {
 
-    private final List<String> users = List.of("Дима", "Виталик", "Денис");
+    private final List<String> users = List.of("John", "Mike", "Anna");
 
     public static void main(String[] args) {
         SpringApplication.run(UsersApplication.class, args);
@@ -28,7 +28,7 @@ public class UsersApplication {
         try {
             return users.get(id - 1);
         } catch (RuntimeException e) {
-            return "Нет такого пользователя";
+            return "User not found";
         }
     }
 }
