@@ -20,12 +20,8 @@ public class OrderApplication {
         SpringApplication.run(OrderApplication.class, args);
     }
 
-
-    // сделать заказ (передаём поле orderName)
     @GetMapping("/doOrder")
     public String doOrder(@RequestParam String orderName) {
-
-        // в случае если возникнет исключение отправим сообщение
         try {
             feignClient.sendNotification("Вы сделали заказ " + orderName);
             return "Был сделан заказ " + orderName;

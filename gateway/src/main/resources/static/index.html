@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
+  <title>Developer Hub — Spring Cloud</title>
+  <style>
+    :root {
+      --bg: #0f1419;
+      --surface: #1a2332;
+      --border: #2d3a4d;
+      --text: #e8ecf1;
+      --muted: #8b9cb3;
+      --accent: #3ecf8e;
+      --accent-dim: rgba(62, 207, 142, 0.15);
+      --warn: #f0b429;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: "Segoe UI", system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      background-image:
+        radial-gradient(ellipse 80% 50% at 50% -20%, rgba(62, 207, 142, 0.12), transparent);
+    }
+    .wrap {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 2.5rem 1.25rem 4rem;
+    }
+    header {
+      margin-bottom: 2.5rem;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 1.5rem;
+    }
+    h1 {
+      font-size: 1.75rem;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+      margin: 0 0 0.5rem;
+    }
+    .lead {
+      color: var(--muted);
+      font-size: 1.05rem;
+      max-width: 42rem;
+      margin: 0;
+    }
+    .badge {
+      display: inline-block;
+      font-size: 0.7rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--accent);
+      background: var(--accent-dim);
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      margin-bottom: 0.75rem;
+    }
+    .grid {
+      display: grid;
+      gap: 1rem;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    }
+    article {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1.25rem 1.35rem;
+      transition: border-color 0.15s ease;
+    }
+    article:hover { border-color: rgba(62, 207, 142, 0.35); }
+    article h2 {
+      font-size: 1.1rem;
+      margin: 0 0 0.35rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    article p {
+      margin: 0 0 1rem;
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+    .port {
+      font-family: ui-monospace, monospace;
+      font-size: 0.8rem;
+      color: var(--warn);
+    }
+    a {
+      color: var(--accent);
+      text-decoration: none;
+      font-size: 0.9rem;
+    }
+    a:hover { text-decoration: underline; }
+    .links { display: flex; flex-direction: column; gap: 0.35rem; }
+    .gateway-note {
+      margin-top: 2rem;
+      padding: 1rem 1.25rem;
+      background: var(--surface);
+      border-radius: 8px;
+      border-left: 3px solid var(--accent);
+      font-size: 0.9rem;
+      color: var(--muted);
+    }
+    .gateway-note code {
+      color: var(--text);
+      font-size: 0.85rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header>
+      <span class="badge">Developer Hub</span>
+      <h1>Микросервисный магазин</h1>
+      <p class="lead">
+        Единая страница для разработки: быстрые ссылки на API через шлюз и интерактивную
+        документацию OpenAPI (Swagger UI) на каждом сервисе.
+      </p>
+    </header>
+    <section class="grid" aria-label="Сервисы">
+      <article>
+        <h2>Gateway <span class="port">:8000</span></h2>
+        <p>Zuul проксирует внешние запросы к Order и Users.</p>
+        <div class="links">
+          <a href="/api/users/users">GET /api/users/users</a>
+          <a href="/api/order/doOrder?orderName=demo">GET /api/order/doOrder</a>
+        </div>
+      </article>
+      <article>
+        <h2>Users <span class="port">:8003</span></h2>
+        <p>Каталог имён покупателей.</p>
+        <div class="links">
+          <a href="http://localhost:8003/swagger-ui/index.html" target="_blank" rel="noopener">Swagger UI</a>
+          <a href="http://localhost:8003/v3/api-docs" target="_blank" rel="noopener">OpenAPI JSON</a>
+        </div>
+      </article>
+      <article>
+        <h2>Order <span class="port">:8001</span></h2>
+        <p>Заказ и вызов Notification через Feign.</p>
+        <div class="links">
+          <a href="http://localhost:8001/swagger-ui/index.html" target="_blank" rel="noopener">Swagger UI</a>
+          <a href="http://localhost:8001/v3/api-docs" target="_blank" rel="noopener">OpenAPI JSON</a>
+        </div>
+      </article>
+      <article>
+        <h2>Notification <span class="port">:8002</span></h2>
+        <p>Внутренний REST; в проде обычно недоступен снаружи.</p>
+        <div class="links">
+          <a href="http://localhost:8002/swagger-ui/index.html" target="_blank" rel="noopener">Swagger UI</a>
+          <a href="http://localhost:8002/v3/api-docs" target="_blank" rel="noopener">OpenAPI JSON</a>
+        </div>
+      </article>
+    </section>
+    <div class="gateway-note">
+      Поднимите все четыре приложения, затем откройте Swagger на нужном порту.
+      Пример через шлюз: <code>curl "http://localhost:8000/api/order/doOrder?orderName=тест"</code>
+    </div>
+  </div>
+</body>
+</html>
