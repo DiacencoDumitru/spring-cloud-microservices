@@ -124,10 +124,10 @@
     <section class="grid" aria-label="Сервисы">
       <article>
         <h2>Gateway <span class="port">:8000</span></h2>
-        <p>Zuul проксирует внешние запросы к Order и Users.</p>
+        <p>Zuul: order, users, inventory.</p>
         <div class="links">
           <a href="/api/users/users">GET /api/users/users</a>
-          <a href="/api/order/doOrder?orderName=demo">GET /api/order/doOrder</a>
+          <a href="/api/order/doOrder?orderName=iphone">GET /api/order/doOrder</a>
         </div>
       </article>
       <article>
@@ -139,8 +139,12 @@
         </div>
       </article>
       <article>
+        <h2>Inventory <span class="port">:8004</span></h2>
+        <p>Резервы склада для Saga (Feign из order). SpringDoc на этом модуле не включён.</p>
+      </article>
+      <article>
         <h2>Order <span class="port">:8001</span></h2>
-        <p>Заказ и вызов Notification через Feign.</p>
+        <p>Saga: inventory → notification → завершение заказа.</p>
         <div class="links">
           <a href="http://localhost:8001/swagger-ui/index.html" target="_blank" rel="noopener">Swagger UI</a>
           <a href="http://localhost:8001/v3/api-docs" target="_blank" rel="noopener">OpenAPI JSON</a>
@@ -156,8 +160,8 @@
       </article>
     </section>
     <div class="gateway-note">
-      Поднимите все четыре приложения, затем откройте Swagger на нужном порту.
-      Пример через шлюз: <code>curl "http://localhost:8000/api/order/doOrder?orderName=тест"</code>
+      Поднимите пять сервисов (gateway, order, inventory, notification, users), затем откройте Swagger на нужном порту.
+      Пример: <code>curl "http://localhost:8000/api/order/doOrder?orderName=iphone"</code>
     </div>
   </div>
 </body>
