@@ -109,6 +109,60 @@
       color: var(--text);
       font-size: 0.85rem;
     }
+    .playground {
+      margin-top: 1.5rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 1rem 1.25rem;
+    }
+    .playground h2 {
+      margin: 0 0 0.25rem;
+      font-size: 1.05rem;
+    }
+    .playground p {
+      margin: 0 0 0.8rem;
+      color: var(--muted);
+      font-size: 0.88rem;
+    }
+    .playground-row {
+      display: flex;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+      margin-bottom: 0.75rem;
+    }
+    select, input, button {
+      border: 1px solid var(--border);
+      background: #0f1824;
+      color: var(--text);
+      border-radius: 6px;
+      padding: 0.45rem 0.55rem;
+      font: inherit;
+      font-size: 0.88rem;
+    }
+    button {
+      cursor: pointer;
+      border-color: rgba(62, 207, 142, 0.45);
+      background: rgba(62, 207, 142, 0.15);
+    }
+    .request-url {
+      margin: 0 0 0.6rem;
+      color: var(--muted);
+      font-size: 0.84rem;
+      word-break: break-all;
+    }
+    pre {
+      margin: 0;
+      max-height: 260px;
+      overflow: auto;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      background: #0b1018;
+      padding: 0.75rem;
+      font-size: 0.82rem;
+      line-height: 1.4;
+      color: #b9c8da;
+    }
   </style>
 </head>
 <body>
@@ -163,6 +217,63 @@
       Поднимите пять сервисов (gateway, order, inventory, notification, users), затем откройте Swagger на нужном порту.
       Пример: <code>curl "http://localhost:8000/api/order/doOrder?orderName=iphone"</code>
     </div>
+    <section class="playground" aria-label="API Playground">
+      <h2>API Playground (через gateway)</h2>
+      <p>Быстрый запуск GET-запроса и просмотр JSON-ответа прямо в хабе.</p>
+      <div class="playground-row">
+        <select id="endpointSelect" aria-label="Выберите endpoint">
+          <option value="/api/users/users">GET /api/users/users</option>
+          <option value="/api/users/users/{id}">GET /api/users/users/{id}</option>
+          <option value="/api/order/doOrder?orderName={orderName}">GET /api/order/doOrder?orderName={orderName}</option>
+        </select>
+        <input id="paramInput" type="text" placeholder="id или orderName (опционально)" />
+        <button id="runBtn" type="button">Выполнить</button>
+      </div>
+      <div id="requestUrl" class="request-url"></div>
+      <pre id="responseBox">Выберите запрос и нажмите "Выполнить".</pre>
+    </section>
   </div>
+  <script>
+    const endpointSelect = document.getElementById("endpointSelect");
+    const paramInput = document.getElementById("paramInput");
+    const runBtn = document.getElementById("runBtn");
+    const requestUrl = document.getElementById("requestUrl");
+    const responseBox = document.getElementById("responseBox");
+
+    function buildPath(template, value) {
+      if (!template.includes("{")) return template;
+      const trimmedValue = value.trim();
+      if (template.includes("{id}")) {
+        const idValue = encodeURIComponent(trimmedValue || "1");
+        return template.replace("{id}", idValue);
+      }
+      if (template.includes("{orderName}")) {
+        const orderValue = encodeURIComponent(trimmedValue || "iphone");
+        return template.replace("{orderName}", orderValue);
+      }
+      return template;
+    }
+
+    async function runRequest() {
+      const path = buildPath(endpointSelect.value, paramInput.value);
+      requestUrl.textContent = "GET " + path;
+      responseBox.textContent = "Загрузка...";
+      try {
+        const response = await fetch(path, { headers: { Accept: "application/json" } });
+        const bodyText = await response.text();
+        let formattedBody = bodyText;
+        try {
+          formattedBody = JSON.stringify(JSON.parse(bodyText), null, 2);
+        } catch (e) {
+          // Ответ не JSON, показываем как есть.
+        }
+        responseBox.textContent = "HTTP " + response.status + "\n\n" + formattedBody;
+      } catch (error) {
+        responseBox.textContent = "Ошибка запроса: " + error.message;
+      }
+    }
+
+    runBtn.addEventListener("click", runRequest);
+  </script>
 </body>
 </html>
