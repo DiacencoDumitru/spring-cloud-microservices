@@ -23,4 +23,14 @@ class UsersApplicationTests {
         assertThat(body).contains("\"openapi\"");
         assertThat(body).contains("Users API");
     }
+
+    @Test
+    void usersCanBeFilteredByPrefixAndLimited() {
+        String[] users = restTemplate.getForObject(
+                "http://localhost:" + port + "/users?prefix=a&limit=1",
+                String[].class
+        );
+
+        assertThat(users).containsExactly("Anna");
+    }
 }
