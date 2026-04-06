@@ -46,6 +46,7 @@ Client (Postman / browser)
 
 - `users` (`8003`)
   - `GET /users`, `GET /users/{id}`
+  - `GET /users?prefix=...&limit=...` — optional filtering by name prefix and result limit
 
 ---
 
@@ -143,6 +144,7 @@ Users:
 ```bash
 curl "http://localhost:8000/api/users/users"
 curl "http://localhost:8000/api/users/users/1"
+curl "http://localhost:8000/api/users/users?prefix=a&limit=1"
 ```
 
 ---
