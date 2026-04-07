@@ -13,7 +13,7 @@ public class OpenApiConfig {
         return new OpenAPI()
                 .info(new Info()
                         .title("Order API")
-                        .description("Оформление заказа и вызов сервиса уведомлений")
+                        .description("Order placement and notification service invocation")
                         .version("1.0"));
     }
 }

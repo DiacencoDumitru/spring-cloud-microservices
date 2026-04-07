@@ -13,7 +13,7 @@ public class OpenApiConfig {
         return new OpenAPI()
                 .info(new Info()
                         .title("Notification API")
-                        .description("Внутренний сервис оповещений (вызывается из Order через Feign)")
+                        .description("Internal notification service (called from Order through Feign)")
                         .version("1.0"));
     }
 }
