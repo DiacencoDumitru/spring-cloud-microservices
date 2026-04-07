@@ -13,7 +13,7 @@ public class OpenApiConfig {
         return new OpenAPI()
                 .info(new Info()
                         .title("Users API")
-                        .description("Список покупателей интернет-магазина")
+                        .description("Online store customer list")
                         .version("1.0"));
     }
 }
