@@ -3,7 +3,7 @@
 This repository contains a small **Spring Boot** / **Spring Cloud** microservices system that looks like a simple online shop.
 
 Services:
-- `gateway` – API gateway based on Spring Cloud Netflix Zuul.
+- `gateway` – API gateway based on Spring Cloud Netflix Zuul with JWT auth and role-based access.
 - `order` – order service; runs an **orchestrated Saga** (inventory reserve → notify → complete).
 - `inventory` – stock reservations (`POST/DELETE /reservations`) for the Saga demo.
 - `notification` – notifications and **compensation** callback for Saga rollback.
@@ -29,9 +29,12 @@ Client (Postman / browser)
 ```
 
 - `gateway` (port `8000`)
+  - `POST /auth/token` — issues JWT token for configured users
+  - `GET /api/gateway/me` — returns authenticated user info (`USER` or `ADMIN`)
+  - `GET /api/gateway/admin/ping` — admin-only probe endpoint
   - `/api/order/**` → `order` (`8001`)
   - `/api/users/**` → `users` (`8003`)
-  - `/api/inventory/**` → `inventory` (`8004`) — optional direct calls for learning
+  - `/api/inventory/**` → `inventory` (`8004`) — `ADMIN` only
 
 - `order` (`8001`)
   - `GET /doOrder?orderName=...` — runs **OrderPlacementSaga** (see below)
@@ -75,6 +78,28 @@ This project uses **orchestration**: the `order` service coordinates steps and c
 - **OpenFeign** – `InventoryFeignClient`, `NotificationServiceFeignClient` for remote steps.
 - **Resilience4j** – `@CircuitBreaker` on `OrderService.placeOrder` (whole Saga call; fallback when the guarded path fails too often).
 - **Sleuth** – trace ids across services in logs.
+
+---
+
+### Gateway security (JWT + roles)
+
+Gateway validates JWT on each protected request and applies RBAC:
+
+- Public:
+  - `POST /auth/token`
+  - `/`, `/index.html`
+- Requires `USER` or `ADMIN`:
+  - `/api/gateway/me`
+  - `/api/order/**`
+  - `/api/users/**`
+- Requires `ADMIN`:
+  - `/api/gateway/admin/ping`
+  - `/api/inventory/**`
+
+Default demo users (configurable in `gateway/src/main/resources/application.yml`):
+
+- `user` / `user123` → role `USER`
+- `admin` / `admin123` → roles `USER`, `ADMIN`
 
 ---
 
@@ -127,24 +152,44 @@ cd users && mvn spring-boot:run
 
 ### Example calls (via gateway)
 
+Get JWT:
+
+```bash
+curl -X POST "http://localhost:8000/auth/token" \
+  -H "Content-Type: application/json" \
+  -d "{\"username\":\"user\",\"password\":\"user123\"}"
+```
+
+Response contains `accessToken`. Use it as:
+
+```bash
+Authorization: Bearer <accessToken>
+```
+
 Place order (Saga: inventory → notification → local complete):
 
 ```bash
-curl "http://localhost:8000/api/order/doOrder?orderName=iphone"
+curl "http://localhost:8000/api/order/doOrder?orderName=iphone" \
+  -H "Authorization: Bearer <accessToken>"
 ```
 
 Reserve stock via gateway (optional):
 
 ```bash
-curl -X POST "http://localhost:8000/api/inventory/reservations" -H "Content-Type: application/json" -d "{\"sku\":\"iphone\"}"
+curl -X POST "http://localhost:8000/api/inventory/reservations" \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer <adminAccessToken>" \
+  -d "{\"sku\":\"iphone\"}"
 ```
 
 Users:
 
 ```bash
-curl "http://localhost:8000/api/users/users"
-curl "http://localhost:8000/api/users/users/1"
-curl "http://localhost:8000/api/users/users?prefix=a&limit=1"
+curl "http://localhost:8000/api/users/users" -H "Authorization: Bearer <accessToken>"
+curl "http://localhost:8000/api/users/users/1" -H "Authorization: Bearer <accessToken>"
+curl "http://localhost:8000/api/users/users?prefix=a&limit=1" -H "Authorization: Bearer <accessToken>"
+curl "http://localhost:8000/api/gateway/me" -H "Authorization: Bearer <accessToken>"
+curl "http://localhost:8000/api/gateway/admin/ping" -H "Authorization: Bearer <adminAccessToken>"
 ```
 
 ---

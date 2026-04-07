@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1"/>
@@ -169,24 +169,25 @@
   <div class="wrap">
     <header>
       <span class="badge">Developer Hub</span>
-      <h1>Микросервисный магазин</h1>
+      <h1>Microservices Shop</h1>
       <p class="lead">
-        Единая страница для разработки: быстрые ссылки на API через шлюз и интерактивную
-        документацию OpenAPI (Swagger UI) на каждом сервисе.
+        Unified development page with quick API links through the gateway and
+        interactive OpenAPI documentation (Swagger UI) for each service.
       </p>
     </header>
-    <section class="grid" aria-label="Сервисы">
+    <section class="grid" aria-label="Services">
       <article>
         <h2>Gateway <span class="port">:8000</span></h2>
-        <p>Zuul: order, users, inventory.</p>
+        <p>Zuul: order, users, inventory with JWT auth and roles.</p>
         <div class="links">
+          <a href="/api/gateway/me">GET /api/gateway/me (JWT)</a>
           <a href="/api/users/users">GET /api/users/users</a>
           <a href="/api/order/doOrder?orderName=iphone">GET /api/order/doOrder</a>
         </div>
       </article>
       <article>
         <h2>Users <span class="port">:8003</span></h2>
-        <p>Каталог имён покупателей.</p>
+        <p>Customer names catalog.</p>
         <div class="links">
           <a href="http://localhost:8003/swagger-ui/index.html" target="_blank" rel="noopener">Swagger UI</a>
           <a href="http://localhost:8003/v3/api-docs" target="_blank" rel="noopener">OpenAPI JSON</a>
@@ -194,11 +195,11 @@
       </article>
       <article>
         <h2>Inventory <span class="port">:8004</span></h2>
-        <p>Резервы склада для Saga (Feign из order). SpringDoc на этом модуле не включён.</p>
+        <p>Inventory reservations for Saga (Feign from order). SpringDoc is not enabled in this module.</p>
       </article>
       <article>
         <h2>Order <span class="port">:8001</span></h2>
-        <p>Saga: inventory → notification → завершение заказа.</p>
+        <p>Saga: inventory → notification → order completion.</p>
         <div class="links">
           <a href="http://localhost:8001/swagger-ui/index.html" target="_blank" rel="noopener">Swagger UI</a>
           <a href="http://localhost:8001/v3/api-docs" target="_blank" rel="noopener">OpenAPI JSON</a>
@@ -206,7 +207,7 @@
       </article>
       <article>
         <h2>Notification <span class="port">:8002</span></h2>
-        <p>Внутренний REST; в проде обычно недоступен снаружи.</p>
+        <p>Internal REST; usually not exposed externally in production.</p>
         <div class="links">
           <a href="http://localhost:8002/swagger-ui/index.html" target="_blank" rel="noopener">Swagger UI</a>
           <a href="http://localhost:8002/v3/api-docs" target="_blank" rel="noopener">OpenAPI JSON</a>
@@ -214,8 +215,8 @@
       </article>
     </section>
     <div class="gateway-note">
-      Поднимите пять сервисов (gateway, order, inventory, notification, users), затем откройте Swagger на нужном порту.
-      Пример: <code>curl "http://localhost:8000/api/order/doOrder?orderName=iphone"</code>
+      First get JWT via <code>POST /auth/token</code> (user/user123 or admin/admin123), then add
+      header <code>Authorization: Bearer &lt;token&gt;</code> for protected endpoints.
     </div>
     <section class="playground" aria-label="API Playground">
       <h2>API Playground (через gateway)</h2>

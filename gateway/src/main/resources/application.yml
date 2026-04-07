@@ -1,6 +1,22 @@
 server:
   port: 8000
 
+security:
+  jwt:
+    secret: "my-super-secret-jwt-key-my-super-secret-jwt-key"
+    expiration-seconds: 3600
+  auth:
+    users:
+      - username: user
+        password: user123
+        roles:
+          - USER
+      - username: admin
+        password: admin123
+        roles:
+          - USER
+          - ADMIN
+
 zuul:
   routes:
     order:
