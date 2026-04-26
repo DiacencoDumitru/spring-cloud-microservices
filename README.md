@@ -1,202 +1,140 @@
-### Overview
+# Spring Cloud Microservices - Production-Style Saga + Gateway Demo
 
-This repository contains a small **Spring Boot** / **Spring Cloud** microservices system that looks like a simple online shop.
+A distributed Spring Boot/Spring Cloud backend that models a lightweight online shop flow.
+The system demonstrates API Gateway security, orchestration-based Saga transactions, service-to-service communication, and resilience patterns.
 
-Services:
-- `gateway` – API gateway based on Spring Cloud Netflix Zuul with JWT auth and role-based access.
-- `order` – order service; runs an **orchestrated Saga** (inventory reserve → notify → complete).
-- `inventory` – stock reservations (`POST/DELETE /reservations`) for the Saga demo.
-- `notification` – notifications and **compensation** callback for Saga rollback.
-- `users` – users API.
+## Highlights
 
----
+- Multi-service architecture with dedicated domain services (`gateway`, `order`, `inventory`, `notification`, `users`)
+- Orchestrated Saga in `order` service with forward and compensation steps
+- JWT-based authentication and role-based access control at gateway level
+- OpenFeign clients for inter-service calls (`order` -> `inventory`, `notification`)
+- Circuit breaker protection for order placement flow
+- Trace propagation across service logs via Spring Cloud Sleuth
+- Developer hub and OpenAPI endpoints for quick local exploration
 
-### Architecture
+## Architecture
 
-```text
-Client (Postman / browser)
-          |
-          v
-   [ gateway (Zuul) ]
-        /       \
-       v         v
-[ order ]     [ users ]
-   |   \
-   |    v
-   |  [ inventory ]
-   v
-[ notification ]
+```mermaid
+flowchart LR
+    Client["Client (browser/Postman)"] --> Gateway["gateway :8000 (Zuul + JWT + RBAC)"]
+
+    Gateway --> Order["order :8001"]
+    Gateway --> Users["users :8003"]
+    Gateway --> Inventory["inventory :8004"]
+
+    Order -->|"reserve/release"| Inventory
+    Order -->|"notify/compensate"| Notification["notification :8002"]
+    Order --> Store["InMemoryOrderStore"]
 ```
 
-- `gateway` (port `8000`)
-  - `POST /auth/token` — issues JWT token for configured users
-  - `GET /api/gateway/me` — returns authenticated user info (`USER` or `ADMIN`)
-  - `GET /api/gateway/admin/ping` — admin-only probe endpoint
-  - `/api/order/**` → `order` (`8001`)
-  - `/api/users/**` → `users` (`8003`)
-  - `/api/inventory/**` → `inventory` (`8004`) — `ADMIN` only
+### How it works (high level)
 
-- `order` (`8001`)
-  - `GET /doOrder?orderName=...` — runs **OrderPlacementSaga** (see below)
+- Client obtains JWT from gateway and calls protected APIs through a single entry point.
+- Gateway validates token/roles and routes requests to downstream services.
+- `order` executes an orchestrated Saga for order placement.
+- Saga happy path: local order creation -> inventory reservation -> notification -> complete order.
+- On failures, `order` triggers compensations (release reservation, compensate notification, cancel local order).
 
-- `inventory` (`8004`)
-  - `POST /reservations` body `{"sku":"iphone"}` → `{"reservationId":"..."}` or `409` if out of stock
-  - `DELETE /reservations/{reservationId}` — release (compensation)
+## Engineering Challenges
 
-- `notification` (`8002`)
-  - `POST /sendNotification`
-  - `POST /compensateNotification` — invoked when the Saga must undo the notify step
+- Keeping distributed order flow consistent without a global transaction manager
+- Designing reliable compensation order for partial failures
+- Centralizing authentication/authorization while preserving service boundaries
+- Applying resilience controls without hiding business-level failure semantics
+- Maintaining clear API contracts across routed and internal service endpoints
 
-- `users` (`8003`)
-  - `GET /users`, `GET /users/{id}`
-  - `GET /users?prefix=...&limit=...` — optional filtering by name prefix and result limit
+## My Contribution
 
----
+- Implemented orchestrated Saga workflow in `order` with explicit rollback paths.
+- Added gateway-level JWT auth and RBAC with role-scoped route access.
+- Integrated OpenFeign clients for synchronous cross-service operations.
+- Added resilience guardrails around order placement with circuit breaker support.
+- Structured local developer experience with service-level OpenAPI access and gateway hub.
 
-### Saga pattern (orchestration)
+## Tech Stack
 
-This project uses **orchestration**: the `order` service coordinates steps and compensations.
+- **Backend:** Java 11, Spring Boot 2.7.1, Spring Cloud 2021.0.3
+- **Cloud Components:** Zuul, OpenFeign, Sleuth
+- **Resilience:** Resilience4j
+- **Build:** Maven multi-module project
 
-**Forward steps** (happy path):
-1. Create local order state (`InMemoryOrderStore`).
-2. **Reserve** stock in `inventory` (Feign).
-3. **Notify** the customer via `notification` (Feign).
-4. Mark order **completed** locally.
+## Quick Start
 
-**Compensations** (rollback), in reverse order when needed:
-- If notify fails after a reservation exists → `DELETE` reservation (release stock), cancel local order.
-- If local “complete” fails after notify (rare in this demo) → `compensateNotification`, release reservation, cancel order.
-- If reserve returns **409** (no stock) → cancel local order only.
+### Prerequisites
 
-**Not in this repo**: *choreography* (events only, no central coordinator) and durable Saga logs / outbox — you would add those for production.
+- Java 11+
+- Maven 3.8+
 
----
-
-### Spring Cloud usage
-
-- **Zuul** – single entry; routes in `gateway/application.yml`.
-- **OpenFeign** – `InventoryFeignClient`, `NotificationServiceFeignClient` for remote steps.
-- **Resilience4j** – `@CircuitBreaker` on `OrderService.placeOrder` (whole Saga call; fallback when the guarded path fails too often).
-- **Sleuth** – trace ids across services in logs.
-
----
-
-### Gateway security (JWT + roles)
-
-Gateway validates JWT on each protected request and applies RBAC:
-
-- Public:
-  - `POST /auth/token`
-  - `/`, `/index.html`
-- Requires `USER` or `ADMIN`:
-  - `/api/gateway/me`
-  - `/api/order/**`
-  - `/api/users/**`
-- Requires `ADMIN`:
-  - `/api/gateway/admin/ping`
-  - `/api/inventory/**`
-
-Default demo users (configurable in `gateway/src/main/resources/application.yml`):
-
-- `user` / `user123` → role `USER`
-- `admin` / `admin123` → roles `USER`, `ADMIN`
-
----
-
-### Tech stack
-
-- Java 11, Spring Boot 2.7.1, Spring Cloud 2021.0.3, Maven (one `pom.xml` per service).
-
----
-
-### How to run
-
-**Prerequisites:** JDK 11+, Maven 3.8+
-
-**Build** (from repo root — there is a root `pom.xml` that aggregates all modules):
+### Build all modules
 
 ```bash
+git clone https://github.com/DiacencoDumitru/spring-cloud-microservices.git
+cd spring-cloud-microservices
 mvn clean install
 ```
 
-Or build a single service:
+### Run services (5 terminals)
 
 ```bash
-cd gateway && mvn clean package
-```
-
-**Run** (five terminals):
-
-```bash
-# gateway (8000)
 cd gateway && mvn spring-boot:run
-```
-
-```bash
 cd order && mvn spring-boot:run
-```
-
-```bash
 cd inventory && mvn spring-boot:run
-```
-
-```bash
 cd notification && mvn spring-boot:run
-```
-
-```bash
 cd users && mvn spring-boot:run
 ```
 
----
-
-### Example calls (via gateway)
-
-Get JWT:
+## How to Verify
 
 ```bash
+# 1) get user token
 curl -X POST "http://localhost:8000/auth/token" \
   -H "Content-Type: application/json" \
   -d "{\"username\":\"user\",\"password\":\"user123\"}"
-```
 
-Response contains `accessToken`. Use it as:
+# 2) call protected user endpoint
+curl "http://localhost:8000/api/gateway/me" \
+  -H "Authorization: Bearer <accessToken>"
 
-```bash
-Authorization: Bearer <accessToken>
-```
-
-Place order (Saga: inventory → notification → local complete):
-
-```bash
+# 3) run Saga order flow
 curl "http://localhost:8000/api/order/doOrder?orderName=iphone" \
   -H "Authorization: Bearer <accessToken>"
 ```
 
-Reserve stock via gateway (optional):
+## Key Endpoints
 
-```bash
-curl -X POST "http://localhost:8000/api/inventory/reservations" \
-  -H "Content-Type: application/json" \
-  -H "Authorization: Bearer <adminAccessToken>" \
-  -d "{\"sku\":\"iphone\"}"
-```
+- Gateway (`:8000`)
+  - `POST /auth/token`
+  - `GET /api/gateway/me`
+  - `GET /api/gateway/admin/ping`
+- Order (`routed via /api/order/**`)
+  - `GET /doOrder?orderName=...`
+- Inventory (`routed via /api/inventory/**`, admin role)
+  - `POST /reservations`
+  - `DELETE /reservations/{reservationId}`
+- Users (`routed via /api/users/**`)
+  - `GET /users`
+  - `GET /users/{id}`
+  - `GET /users?prefix=...&limit=...`
 
-Users:
+## Why This Project
 
-```bash
-curl "http://localhost:8000/api/users/users" -H "Authorization: Bearer <accessToken>"
-curl "http://localhost:8000/api/users/users/1" -H "Authorization: Bearer <accessToken>"
-curl "http://localhost:8000/api/users/users?prefix=a&limit=1" -H "Authorization: Bearer <accessToken>"
-curl "http://localhost:8000/api/gateway/me" -H "Authorization: Bearer <accessToken>"
-curl "http://localhost:8000/api/gateway/admin/ping" -H "Authorization: Bearer <adminAccessToken>"
-```
+This project showcases production-style concerns beyond CRUD:
 
----
+- distributed transaction consistency via Saga orchestration
+- centralized edge security and routing
+- resilient inter-service communication
+- observable and testable local microservice setup
 
-### Developer Hub and OpenAPI
+## Project Structure
 
-- **http://localhost:8000/** — static hub with links to common gateway routes and Swagger UI on each documented service.
-- In Developer Hub, there is an **API Playground**: select a predefined gateway GET endpoint, optionally pass a parameter (`id` or `orderName`), run request, and inspect response body/status in-place.
-- **SpringDoc** on **users**, **order**, and **notification**: `/swagger-ui/index.html` and `/v3/api-docs`.
-- Ports: gateway `8000`, order `8001`, notification `8002`, users `8003`, inventory `8004`.
+- `gateway` - API gateway, JWT auth, route-level RBAC
+- `order` - Saga orchestrator and order lifecycle
+- `inventory` - reservation and stock compensation endpoints
+- `notification` - notification and compensation handling
+- `users` - user-facing API
+- `pom.xml` - root aggregator for all modules
+
+## Author
+
+Dumitru Diacenco, Java Backend Engineer
